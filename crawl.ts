@@ -1,6 +1,31 @@
 const {JSDOM} = require('jsdom');
 
-function getURLsFromHtml(htmlBody: string, baseURL: string) : string[] {
+async function crawlPage(currentURL: string) {
+    console.log(`Crawling ${currentURL}`);
+
+    try {
+        const response = await fetch(currentURL);
+
+        if (response.status > 399) {
+            console.log(`Error in fetch with status code: ${response.status} on page ${currentURL}`);
+            return;
+        }
+
+        const contentType = response.headers.get("content-type");
+        
+        if (!contentType?.includes("text/html")) {
+            console.log(`Non html response: ${contentType} on page ${currentURL}`);
+            return;
+        }
+
+        console.log(await response.text());
+    } catch (error: any) {
+        console.log(`Error in fetch ${error} on page: ${currentURL}`);
+    }
+
+}
+
+const getURLsFromHtml = (htmlBody: string, baseURL: string) : string[] => {
     const urls: string[] = []
     
     const dom = new JSDOM(htmlBody);
@@ -31,7 +56,7 @@ function getURLsFromHtml(htmlBody: string, baseURL: string) : string[] {
     return urls;
 }
 
-function normalizeURL(urlString:string) : string {
+const normalizeURL = (urlString:string) : string => {
     const url = new URL(urlString);
 
     let hostpath = url.hostname + url.pathname;
@@ -45,7 +70,8 @@ function normalizeURL(urlString:string) : string {
 
 module.exports = { 
     normalizeURL,
-    getURLsFromHtml
+    getURLsFromHtml,
+    crawlPage
 }
 
 // Without this, there are a few errors regarding block-scope. Why? I have no idea
