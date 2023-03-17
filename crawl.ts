@@ -1,6 +1,28 @@
 const {JSDOM} = require('jsdom');
 
-async function crawlPage(currentURL: string) {
+interface urlCount {
+    [propName: string]: number
+}
+
+
+async function crawlPage(baseURL: string, currentURL: string, pages: urlCount) : Promise<urlCount | undefined> {
+    
+    const baseURLObj = new URL(baseURL);
+    const currentURLObj = new URL (currentURL);
+
+    if (baseURLObj.hostname !== currentURLObj.hostname) {
+        return pages;
+    }
+
+    const normalizedCurrentURL = normalizeURL(currentURL);
+
+    if (pages[normalizedCurrentURL] > 0) {
+        pages[normalizedCurrentURL]++;
+        return pages;
+    }
+    
+    pages[normalizedCurrentURL] = 1;
+    
     console.log(`Crawling ${currentURL}`);
 
     try {
@@ -13,15 +35,29 @@ async function crawlPage(currentURL: string) {
 
         const contentType = response.headers.get("content-type");
         
-        if (!contentType?.includes("text/html")) {
-            console.log(`Non html response: ${contentType} on page ${currentURL}`);
-            return;
+        if (typeof contentType === "string") {
+            if (!contentType.includes("text/html")) {
+                console.log(`Non html response: ${contentType} on page ${currentURL}`);
+                return;
+            }
         }
 
-        console.log(await response.text());
+        const htmlBody = await response.text();
+
+        const nextURLs = getURLsFromHtml(htmlBody, baseURL);
+
+        for (const nextURL of nextURLs) {
+            const result = await crawlPage(baseURL, nextURL, pages);
+
+            if (typeof result === 'object')
+                pages = result;
+        }
+
     } catch (error: any) {
         console.log(`Error in fetch ${error} on page: ${currentURL}`);
     }
+
+    return pages;
 
 }
 
@@ -71,8 +107,8 @@ const normalizeURL = (urlString:string) : string => {
 module.exports = { 
     normalizeURL,
     getURLsFromHtml,
-    crawlPage
+    crawlPage,
 }
 
 // Without this, there are a few errors regarding block-scope. Why? I have no idea
-export{};
+export{ urlCount };
