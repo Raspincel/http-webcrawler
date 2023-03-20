@@ -29,8 +29,13 @@ const main = async ()=> {
         pages = await crawlPage(item, item, pages);
     }
 
-    for (const [pageURL, linkedNumber] of Object.entries(pages)) {
-        console.log(`${pageURL} [${linkedNumber}]`);
+    const sortedPages = Object.entries(pages).sort((a, b)=> {
+        return b[1] - a[1];
+    });
+
+    console.log('\n\nInfos about the crawling: ')
+    for (const [pageURL, linksNumber] of sortedPages) {
+        console.log(`Found [${linksNumber}] links to the page: ${pageURL}`);
     }
 
 }
